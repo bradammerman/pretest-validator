@@ -1,0 +1,280 @@
+# =============================================================================
+# PRETEST VALIDATOR - EXAMPLE CONFIGURATION
+# =============================================================================
+#
+# PURPOSE:
+# This tool validates all engagement prerequisites before a penetration test:
+# - Target domains resolve and respond to HTTP/HTTPS
+# - IP ranges are valid and hosts are reachable
+# - VPN connects and routes to internal networks
+# - API tokens authenticate successfully
+# - SSH credentials work
+# - Web application logins function
+# - MFA secrets generate valid codes
+#
+# USAGE:
+#   1. Copy this file to 'pretest.yaml'
+#   2. Edit with your engagement-specific details
+#   3. Run: python -m pretest_validator.cli pretest.yaml
+#
+# INSTALLATION:
+#   pip install pyyaml requests dnspython rich paramiko
+#
+# REQUIREMENTS:
+#   - Python 3.10+
+#   - Network access to targets
+#   - Valid credentials for authentication tests
+#
+# EXAMPLE COMMANDS:
+#   # Run all validators
+#   python -m pretest_validator.cli pretest.yaml
+#
+#   # Export reports
+#   python -m pretest_validator.cli pretest.yaml --json report.json --md report.md
+#
+#   # Run only specific validators
+#   python -m pretest_validator.cli pretest.yaml --only domains --only ssh
+#
+#   # Skip certain validators
+#   python -m pretest_validator.cli pretest.yaml --skip vpn --skip mfa
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ENGAGEMENT INFORMATION
+# -----------------------------------------------------------------------------
+# Basic metadata for identifying the engagement in reports.
+
+client: ACME Corp                    # Client/organization name
+engagement_id: ACME-2026-02          # Unique engagement identifier
+
+# -----------------------------------------------------------------------------
+# DOMAIN VALIDATION
+# -----------------------------------------------------------------------------
+# Validates DNS resolution and HTTP/HTTPS connectivity for target domains.
+#
+# What it checks:
+#   - DNS A record resolution (does the domain resolve?)
+#   - HTTP connectivity (is port 80 responding?)
+#   - HTTPS connectivity (is port 443 responding with valid SSL?)
+#
+# Use this to verify:
+#   - In-scope domains are reachable
+#   - Web servers are online
+#   - SSL certificates are valid
+
+domains:
+  targets:
+    - example.com                    # Main domain
+    - www.example.com                # WWW subdomain
+    - api.example.com                # API subdomain
+  check_dns: true                    # Test DNS A record resolution
+  check_http: true                   # Test HTTP (port 80) connectivity
+  check_https: true                  # Test HTTPS (port 443) connectivity
+  timeout: 10                        # Seconds to wait for each request
+
+# -----------------------------------------------------------------------------
+# CIDR/IP RANGE VALIDATION
+# -----------------------------------------------------------------------------
+# Validates IP ranges are properly formatted and tests sample host reachability.
+#
+# What it checks:
+#   - CIDR notation is valid (e.g., 192.168.1.0/24)
+#   - Calculates network size and host count
+#   - Pings sample hosts (first, last, middle) from each range
+#
+# Use this to verify:
+#   - IP ranges in scope are correctly specified
+#   - Some hosts in the range are reachable
+#   - Network routing works to target ranges
+
+cidrs:
+  targets:
+    - 192.168.1.0/24                 # /24 = 254 usable hosts
+    - 10.0.0.0/16                    # /16 = 65,534 usable hosts
+  ping_sample: 3                     # Number of IPs to sample ping per range
+  timeout: 5                         # Ping timeout in seconds
+
+# -----------------------------------------------------------------------------
+# VPN CONFIGURATION
+# -----------------------------------------------------------------------------
+# Validates VPN connectivity for accessing internal networks.
+#
+# What it checks:
+#   - Config file exists and is readable
+#   - Current public IP matches expected VPN IP
+#   - Internal test host is reachable (verifies VPN routing)
+#
+# Use this to verify:
+#   - VPN configuration file is valid
+#   - VPN is currently connected
+#   - Internal network access works through VPN
+
+vpn:
+  enabled: false                     # Set to true to enable VPN checks
+  type: openvpn                      # openvpn, wireguard, or ipsec
+  config_file: ~/vpn/client.ovpn    # Path to VPN configuration file
+  expected_ip: 203.0.113.50          # Expected public IP when VPN connected
+  test_host: 10.10.10.1              # Internal host to verify VPN routing
+
+# -----------------------------------------------------------------------------
+# API TOKEN VALIDATION
+# -----------------------------------------------------------------------------
+# Validates API credentials and endpoint connectivity.
+#
+# What it checks:
+#   - API endpoint is reachable
+#   - Authentication headers are accepted
+#   - Response status matches expected code
+#
+# Use this to verify:
+#   - API tokens are valid and not expired
+#   - Endpoints are accessible
+#   - Authentication works correctly
+
+api:
+  targets:
+    # Example: GitHub API with bearer token
+    - name: GitHub API               # Descriptive name for reports
+      url: https://api.github.com/user
+      method: GET                    # HTTP method (GET, POST, PUT, DELETE)
+      headers:                       # Headers including auth token
+        Authorization: "Bearer ghp_xxxxxxxxxxxxxxxxxxxx"
+        Accept: "application/vnd.github.v3+json"
+      expected_status: 200           # Expected HTTP status code
+      timeout: 30                    # Request timeout in seconds
+    
+    # Example: Internal API with API key
+    - name: Internal API
+      url: https://api.internal.example.com/health
+      method: GET
+      headers:
+        X-API-Key: "your-api-key-here"
+      expected_status: 200
+      verify_ssl: true               # Set to false for self-signed certs
+
+# -----------------------------------------------------------------------------
+# SSH VALIDATION
+# -----------------------------------------------------------------------------
+# Validates SSH connectivity and authentication credentials.
+#
+# What it checks:
+#   - SSH port is open and accepting connections
+#   - Authentication succeeds (key-based or password)
+#   - Server version/banner information
+#
+# Use this to verify:
+#   - SSH targets are reachable
+#   - Credentials work before the engagement
+
+ssh:
+  targets:
+    # Key-based authentication example
+    - host: jumpbox.example.com      # Hostname or IP
+      port: 22                       # SSH port (default: 22)
+      username: pentester            # SSH username
+      key_file: ~/.ssh/id_rsa        # Path to private key file
+    
+    # Password authentication example
+    - host: 192.168.1.100
+      port: 22
+      username: admin
+      password: "your-password-here" # SSH password (use quotes)
+  
+  timeout: 10                        # Connection timeout in seconds
+
+# -----------------------------------------------------------------------------
+# WEB LOGIN VALIDATION
+# -----------------------------------------------------------------------------
+# Validates web application login credentials.
+#
+# What it checks:
+#   - Login page is accessible
+#   - Form submission works
+#   - Login success/failure detection (via indicators)
+#
+# Use this to verify:
+#   - Web application credentials work
+#   - Login forms accept credentials
+#   - Application is accessible
+
+web_login:
+  targets:
+    # Example: Admin portal login
+    - name: Admin Portal             # Descriptive name for reports
+      url: https://admin.example.com/login         # Login page URL
+      login_url: https://admin.example.com/login   # Form POST URL (if different)
+      username: admin@example.com    # Login username/email
+      password: "your-password-here" # Login password
+      username_field: email          # Form field name for username
+      password_field: password       # Form field name for password
+      success_indicator: "Dashboard" # Text appearing on successful login
+      failure_indicator: "Invalid credentials"     # Text appearing on failure
+      method: POST                   # Form submission method
+      timeout: 30                    # Request timeout
+      verify_ssl: true               # SSL certificate verification
+      additional_fields:             # Extra form fields (CSRF, etc.)
+        csrf_token: ""               # Leave empty if auto-detected
+    
+    # Simpler example with minimal config
+    - name: Customer Portal
+      url: https://portal.example.com
+      username: testuser
+      password: "your-password-here"
+      success_indicator: "Welcome"
+
+# -----------------------------------------------------------------------------
+# MFA VALIDATION
+# -----------------------------------------------------------------------------
+# Validates Multi-Factor Authentication configurations.
+#
+# What it checks:
+#   - TOTP secrets are valid and generates current code
+#   - Backup codes are recorded
+#   - Out-of-band MFA (SMS, email) is documented
+#
+# Use this to verify:
+#   - TOTP secrets generate valid codes
+#   - You have backup codes if needed
+#   - MFA is properly configured before engagement
+
+mfa:
+  targets:
+    # TOTP (Google Authenticator, Authy, etc.)
+    # Get the secret from the QR code setup or account settings
+    - name: Admin TOTP
+      type: totp                     # Time-based One-Time Password
+      secret: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"  # Base32 secret (32 chars)
+    
+    # SMS-based MFA (cannot auto-validate, just documents it)
+    - name: User SMS MFA
+      type: sms
+      description: "SMS to +1-555-123-4567"
+    
+    # Backup codes (store for emergency access)
+    - name: Backup Codes
+      type: backup_codes
+      codes:
+        - "12345678"
+        - "87654321"
+        - "11223344"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+#
+# SECURITY:
+#   - This file contains sensitive credentials - store securely!
+#   - Add 'pretest.yaml' to .gitignore to prevent accidental commits
+#   - Restrict file permissions: chmod 600 pretest.yaml
+#
+# OPTIONAL SECTIONS:
+#   - All sections are optional - only include what you need
+#   - Remove or comment out sections you don't need to validate
+#
+# TROUBLESHOOTING:
+#   - SSL errors: Set verify_ssl: false for self-signed certificates
+#   - SSH key errors: Ensure key file permissions are 600
+#   - VPN not detected: Verify expected_ip matches your VPN public IP
+#
+# =============================================================================
