@@ -12,6 +12,7 @@ Before a penetration test begins, testers need to verify:
 - SSH credentials and keys are valid
 - Web application logins work
 - MFA secrets generate valid codes
+- Cloud credentials (AWS, Azure, GCP) are valid
 
 **Pretest Validator automates all of these checks** and produces a clear report showing what's ready and what needs attention.
 
@@ -26,6 +27,7 @@ Before a penetration test begins, testers need to verify:
 | **SSH** | Port open, key-based auth, password auth |
 | **Web Login** | Page loads, form submission, success/failure detection |
 | **MFA** | TOTP secret validity, current code generation, backup codes |
+| **Cloud** | AWS, Azure, GCP credential validation |
 
 ## Requirements
 
@@ -35,12 +37,23 @@ Before a penetration test begins, testers need to verify:
 
 ### Python Dependencies
 
+**Core (required):**
 ```
-pyyaml>=6.0       # YAML configuration parsing
-requests>=2.28    # HTTP/HTTPS requests for web and API validation
-dnspython>=2.3    # DNS resolution and record lookups
-rich>=13.0        # Beautiful console output with colors and tables
-paramiko>=3.0     # SSH connectivity and authentication
+pyyaml>=6.0         # YAML configuration parsing
+requests>=2.28      # HTTP/HTTPS requests for web and API validation
+dnspython>=2.3      # DNS resolution and record lookups
+rich>=13.0          # Beautiful console output with colors and tables
+paramiko>=3.0       # SSH connectivity and authentication
+beautifulsoup4>=4.12 # HTML parsing for web login form detection
+```
+
+**Cloud SDKs (optional - install only what you need):**
+```
+boto3               # AWS credential validation
+azure-identity      # Azure credential validation
+azure-mgmt-resource # Azure subscription listing
+google-auth         # GCP credential validation
+google-cloud-storage # GCP API access
 ```
 
 ## Installation
@@ -366,6 +379,42 @@ mfa:
         - "12345678"
         - "87654321"
         - "11223344"
+
+# -----------------------------------------------------------------------------
+# Cloud Provider Validation
+# -----------------------------------------------------------------------------
+# Validates AWS, Azure, and GCP credentials.
+# Cloud SDKs are optional - install only what you need:
+#   AWS:   pip install boto3
+#   Azure: pip install azure-identity azure-mgmt-resource
+#   GCP:   pip install google-auth google-cloud-storage
+
+cloud:
+  targets:
+    # AWS with explicit credentials
+    - name: AWS Production
+      provider: aws
+      access_key_id: "AKIAIOSFODNN7EXAMPLE"
+      secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      region: us-east-1
+
+    # AWS with named profile
+    - name: AWS Dev
+      provider: aws
+      profile: dev-account
+
+    # Azure service principal
+    - name: Azure Subscription
+      provider: azure
+      tenant_id: "your-tenant-id"
+      client_id: "your-client-id"
+      client_secret: "your-client-secret"
+
+    # GCP service account
+    - name: GCP Project
+      provider: gcp
+      service_account_file: "~/keys/gcp-sa.json"
+      project_id: "my-project-id"
 ```
 
 ## Output Formats

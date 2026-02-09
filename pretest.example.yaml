@@ -190,38 +190,38 @@ ssh:
 #
 # What it checks:
 #   - Login page is accessible
-#   - Form submission works
-#   - Login success/failure detection (via indicators)
+#   - Auto-detects form field names (username, email, password, etc.)
+#   - Submits credentials and checks for success/failure
 #
-# Use this to verify:
-#   - Web application credentials work
-#   - Login forms accept credentials
-#   - Application is accessible
+# SIMPLIFIED CONFIG (recommended for most sites):
+#   Just provide url, username, password, and success_indicator.
+#   The tool auto-detects common field names like:
+#   username, email, user, login, password, passwd, pass, etc.
 
 web_login:
   targets:
-    # Example: Admin portal login
-    - name: Admin Portal             # Descriptive name for reports
-      url: https://admin.example.com/login         # Login page URL
-      login_url: https://admin.example.com/login   # Form POST URL (if different)
-      username: admin@example.com    # Login username/email
-      password: "your-password-here" # Login password
-      username_field: email          # Form field name for username
-      password_field: password       # Form field name for password
-      success_indicator: "Dashboard" # Text appearing on successful login
-      failure_indicator: "Invalid credentials"     # Text appearing on failure
-      method: POST                   # Form submission method
-      timeout: 30                    # Request timeout
-      verify_ssl: true               # SSL certificate verification
-      additional_fields:             # Extra form fields (CSRF, etc.)
-        csrf_token: ""               # Leave empty if auto-detected
-    
-    # Simpler example with minimal config
+    # SIMPLE CONFIG - works for most login forms
     - name: Customer Portal
-      url: https://portal.example.com
-      username: testuser
+      url: https://portal.example.com/login
+      username: testuser@example.com
       password: "your-password-here"
-      success_indicator: "Welcome"
+      success_indicator: "Welcome"   # Text that appears after successful login
+    
+    # FULL CONFIG - only needed for non-standard forms
+    - name: Admin Portal
+      url: https://admin.example.com/login
+      login_url: https://admin.example.com/auth    # If POST URL differs from page URL
+      username: admin@example.com
+      password: "your-password-here"
+      username_field: user_email     # Only if auto-detect fails
+      password_field: user_pass      # Only if auto-detect fails
+      success_indicator: "Dashboard"
+      failure_indicator: "Invalid credentials"
+      method: POST
+      timeout: 30
+      verify_ssl: true
+      additional_fields:             # Extra form fields (CSRF, etc.)
+        remember_me: "true"
 
 # -----------------------------------------------------------------------------
 # MFA VALIDATION
@@ -258,6 +258,57 @@ mfa:
         - "12345678"
         - "87654321"
         - "11223344"
+
+# -----------------------------------------------------------------------------
+# CLOUD PROVIDER VALIDATION
+# -----------------------------------------------------------------------------
+# Validates cloud provider credentials for AWS, Azure, and GCP.
+#
+# What it checks:
+#   - AWS: Validates credentials using STS GetCallerIdentity
+#   - Azure: Validates service principal or CLI credentials
+#   - GCP: Validates service account or application default credentials
+#
+# IMPORTANT: Cloud SDKs are optional. Install only what you need:
+#   - AWS:   pip install boto3
+#   - Azure: pip install azure-identity azure-mgmt-resource
+#   - GCP:   pip install google-auth google-cloud-storage
+
+cloud:
+  targets:
+    # AWS - Using explicit credentials
+    - name: AWS Production
+      provider: aws
+      access_key_id: "AKIAIOSFODNN7EXAMPLE"
+      secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      region: us-east-1
+    
+    # AWS - Using named profile from ~/.aws/credentials
+    # - name: AWS Dev Profile
+    #   provider: aws
+    #   profile: dev-account
+    #   region: us-west-2
+    
+    # Azure - Using service principal
+    - name: Azure Subscription
+      provider: azure
+      tenant_id: "your-tenant-id"
+      client_id: "your-client-id"
+      client_secret: "your-client-secret"
+    
+    # Azure - Using CLI credentials (just specify provider)
+    # - name: Azure CLI
+    #   provider: azure
+    
+    # GCP - Using service account file
+    - name: GCP Project
+      provider: gcp
+      service_account_file: "~/keys/gcp-service-account.json"
+      project_id: "my-project-id"
+    
+    # GCP - Using application default credentials
+    # - name: GCP Default
+    #   provider: gcp
 
 # =============================================================================
 # NOTES

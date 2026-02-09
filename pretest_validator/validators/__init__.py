@@ -40,6 +40,7 @@ from .api import APIValidator
 from .ssh import SSHValidator
 from .web_login import WebLoginValidator
 from .mfa import MFAValidator
+from .cloud import CloudValidator
 
 __all__ = [
     'DomainValidator',
@@ -49,4 +50,5 @@ __all__ = [
     'SSHValidator',
     'WebLoginValidator',
     'MFAValidator',
+    'CloudValidator',
 ]

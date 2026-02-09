@@ -177,6 +177,36 @@ class MFAConfig:
 
 
 @dataclass
+class CloudConfig:
+    """
+    Configuration for cloud provider credential validation.
+    
+    Attributes:
+        targets: List of cloud target dictionaries, each containing:
+            - name: Descriptive name for the cloud account
+            - provider: Cloud provider - 'aws', 'azure', or 'gcp'
+            
+            For AWS:
+            - access_key_id: AWS access key ID
+            - secret_access_key: AWS secret access key
+            - session_token: (optional) AWS session token
+            - profile: (optional) AWS profile name
+            - region: (optional) AWS region (default: us-east-1)
+            
+            For Azure:
+            - tenant_id: Azure AD tenant ID
+            - client_id: Service principal client ID
+            - client_secret: Service principal client secret
+            - subscription_id: (optional) Target subscription ID
+            
+            For GCP:
+            - service_account_file: Path to service account JSON file
+            - project_id: (optional) GCP project ID
+    """
+    targets: list[dict] = field(default_factory=list)
+
+
+@dataclass
 class PretestConfig:
     """
     Main configuration container holding all validator configurations.
@@ -194,6 +224,7 @@ class PretestConfig:
         ssh: SSH validation configuration
         web_login: Web login validation configuration
         mfa: MFA validation configuration
+        cloud: Cloud provider validation configuration
     """
     client: str = ""
     engagement_id: str = ""
@@ -204,6 +235,7 @@ class PretestConfig:
     ssh: SSHConfig = field(default_factory=SSHConfig)
     web_login: WebLoginConfig = field(default_factory=WebLoginConfig)
     mfa: MFAConfig = field(default_factory=MFAConfig)
+    cloud: CloudConfig = field(default_factory=CloudConfig)
 
 
 def load_config(config_path: str | Path) -> PretestConfig:
@@ -302,6 +334,13 @@ def load_config(config_path: str | Path) -> PretestConfig:
         m = raw['mfa']
         config.mfa = MFAConfig(
             targets=m.get('targets', []),
+        )
+    
+    # Parse Cloud section
+    if 'cloud' in raw:
+        c = raw['cloud']
+        config.cloud = CloudConfig(
+            targets=c.get('targets', []),
         )
     
     return config

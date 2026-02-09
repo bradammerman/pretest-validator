@@ -50,6 +50,7 @@ REQUIRED_PACKAGES = [
     ('dns.resolver', 'dnspython'), # DNS resolution
     ('rich', 'rich'),              # Console formatting
     ('paramiko', 'paramiko'),      # SSH connectivity
+    ('bs4', 'beautifulsoup4'),     # HTML parsing for web login
 ]
 
 
@@ -244,7 +245,7 @@ Examples:
         '--skip',
         type=str,
         action='append',
-        choices=['domains', 'cidrs', 'vpn', 'api', 'ssh', 'web_login', 'mfa'],
+        choices=['domains', 'cidrs', 'vpn', 'api', 'ssh', 'web_login', 'mfa', 'cloud'],
         default=[],
         help='Skip specific validators (can be repeated: --skip vpn --skip mfa)',
     )
@@ -253,7 +254,7 @@ Examples:
         '--only',
         type=str,
         action='append',
-        choices=['domains', 'cidrs', 'vpn', 'api', 'ssh', 'web_login', 'mfa'],
+        choices=['domains', 'cidrs', 'vpn', 'api', 'ssh', 'web_login', 'mfa', 'cloud'],
         default=[],
         help='Run only specific validators (can be repeated: --only domains --only ssh)',
     )
@@ -307,12 +308,13 @@ def run_validators(config, skip: list[str], only: list[str]) -> list:
         SSHValidator,
         WebLoginValidator,
         MFAValidator,
+        CloudValidator,
     )
     
     results = []
     
     # Define available validators in execution order
-    all_validators = ['domains', 'cidrs', 'vpn', 'api', 'ssh', 'web_login', 'mfa']
+    all_validators = ['domains', 'cidrs', 'vpn', 'api', 'ssh', 'web_login', 'mfa', 'cloud']
     
     # Determine which validators to run based on --only and --skip flags
     if only:
@@ -356,6 +358,11 @@ def run_validators(config, skip: list[str], only: list[str]) -> list:
     # MFA validation - TOTP secrets and backup codes
     if 'mfa' in validators_to_run:
         validator = MFAValidator(config.mfa)
+        results.extend(validator.validate_all())
+    
+    # Cloud validation - AWS, Azure, GCP credentials
+    if 'cloud' in validators_to_run:
+        validator = CloudValidator(config.cloud)
         results.extend(validator.validate_all())
     
     return results
